@@ -1,0 +1,56 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Form Submission</title>
+</head>
+<body>
+
+    <form id="userDetailsForm" action="/Home/SubmitUserDetails" method="post">
+        <h2>User Details</h2>
+        <label for="name">Name:</label><br>
+        <input type="text" id="name" name="name" required><br><br>
+
+        <label for="email">Email:</label><br>
+        <input type="email" id="email" name="email" required><br><br>
+
+        <label for="password">Password:</label><br>
+        <input type="password" id="password" name="password" required><br><br>
+
+        <label for="city">City:</label><br>
+        <input type="text" id="city" name="city" required><br><br>
+
+        <button type="submit">Submit Details</button>
+    </form>
+
+    <hr>
+
+    <form id="imageUploadForm" action="/Home/UploadImage" method="post" enctype="multipart/form-data">
+        <h2>Upload Image</h2>
+        <input type="file" id="image" name="image" accept="image/*" required><br><br>
+        <button type="submit">Upload Image</button>
+    </form>
+
+    <hr>
+
+    <form id="pdfUploadForm" action="/Home/UploadPDF" method="post" enctype="multipart/form-data">
+        <h2>Upload PDF</h2>
+        <input type="file" id="pdf" name="pdf" accept="application/pdf" required><br><br>
+        <button type="submit">Upload PDF</button>
+    </form>
+
+    <hr>
+
+    <form id="orderProcess" action="/Home/ProcessTransaction" method="post" enctype="multipart/form-data">
+        <h2>Process Transaction</h2>
+        <button type="submit">Process Transaction</button>
+    </form>
+
+</body>
+</html>
+
