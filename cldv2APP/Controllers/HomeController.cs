@@ -50,7 +50,6 @@ namespace cldv2APP.Controllers
             }
             return RedirectToAction("Index");
         }
-
         [HttpPost]
         public async Task<IActionResult> UploadPDF(IFormFile pdf)
         {
