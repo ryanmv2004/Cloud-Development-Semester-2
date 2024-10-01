@@ -7,6 +7,7 @@ using cldv2APP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
+using System.Net.Http.Headers;
 
 namespace cldv2APP.Controllers
 {
@@ -14,11 +15,13 @@ namespace cldv2APP.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly IConfiguration _configuration;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public HomeController(ILogger<HomeController> logger, IConfiguration configuration)
+        public HomeController(ILogger<HomeController> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory)
         {
             _logger = logger;
             _configuration = configuration;
+            _httpClientFactory = httpClientFactory;
         }
 
         public IActionResult Index()
@@ -34,89 +37,95 @@ namespace cldv2APP.Controllers
         [HttpPost]
         public async Task<IActionResult> UploadImage(IFormFile image)
         {
-            string connectionString = "DefaultEndpointsProtocol=https;AccountName=st10365052demostorage;AccountKey=5fTakvNfnJG3Gm7ndmyFD1gno7X9MsKJbKiuSLZNYxdz6VPzTzH28MpyK/H8u/mZbRQ74C1OOAyO+AStQ/yUkg==;EndpointSuffix=core.windows.net";
-            string containerName = "st10365052container";
-
-            BlobServiceClient blobServiceClient = new BlobServiceClient(connectionString);
-            BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(containerName);
-            await containerClient.CreateIfNotExistsAsync();
-
-            string blobName = Guid.NewGuid().ToString() + Path.GetExtension(image.FileName);
-            BlobClient blobClient = containerClient.GetBlobClient(blobName);
-
-            using (var stream = image.OpenReadStream())
+            if (image != null) 
             {
-                await blobClient.UploadAsync(stream, true);
+                using var stream = new MemoryStream();
+                await image.CopyToAsync(stream);
+                stream.Position = 0;
+
+                var content = new MultipartFormDataContent();
+                content.Add(new StreamContent(stream), "image", image.FileName);
+
+                var client = _httpClientFactory.CreateClient();
+                var response = await client.PostAsync("https://st10365052cldva2.azurewebsites.net/api/FunctionImages?code=WEoP_u6iH26GmVg4T88WN1j2lennP7n_d15iMw3SiqBuAzFumO3MOA%3D%3D" + image.FileName, content);
             }
             return RedirectToAction("Index");
         }
+
         [HttpPost]
         public async Task<IActionResult> UploadPDF(IFormFile pdf)
         {
-            string connectionString = "DefaultEndpointsProtocol=https;AccountName=st10365052demostorage;AccountKey=5fTakvNfnJG3Gm7ndmyFD1gno7X9MsKJbKiuSLZNYxdz6VPzTzH28MpyK/H8u/mZbRQ74C1OOAyO+AStQ/yUkg==;EndpointSuffix=core.windows.net";
-            string shareName = "st10365052fileshare";
-            string directoryName = "pdfs";
-
-            ShareServiceClient shareServiceClient = new ShareServiceClient(connectionString);
-            ShareClient shareClient = shareServiceClient.GetShareClient(shareName);
-            await shareClient.CreateIfNotExistsAsync();
-
-            ShareDirectoryClient directoryClient = shareClient.GetDirectoryClient(directoryName);
-            await directoryClient.CreateIfNotExistsAsync();
-
-            string fileName = Guid.NewGuid().ToString() + Path.GetExtension(pdf.FileName);
-            ShareFileClient fileClient = directoryClient.GetFileClient(fileName);
-
-            using (var stream = pdf.OpenReadStream())
+            if (pdf == null || pdf.Length == 0)
             {
-                await fileClient.CreateAsync(stream.Length);
-                await fileClient.UploadRangeAsync(new HttpRange(0, stream.Length), stream);
+                return BadRequest("No PDF file uploaded.");
             }
-            return RedirectToAction("Index");
+
+            var client = _httpClientFactory.CreateClient();
+            var requestContent = new MultipartFormDataContent();
+            var fileContent = new StreamContent(pdf.OpenReadStream());
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(pdf.ContentType);
+            requestContent.Add(fileContent, "pdf", pdf.FileName);
+
+            var functionUrl = "https://st10365052cldva2.azurewebsites.net/api/UploadPDF?code=d3jVepHs_3juv7wVnfky-STCl969xG1GGcGjHNzxvVPEAzFu1S9KSQ%3D%3D"; // Replace with your actual function URL
+            var response = await client.PostAsync(functionUrl, requestContent);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return RedirectToAction("Index");
+            }
+            else
+            {
+                return StatusCode((int)response.StatusCode, await response.Content.ReadAsStringAsync());
+            }
         }
 
         [HttpPost]
         public async Task<IActionResult> ProcessTransaction()
         {
-            string connectionString = "DefaultEndpointsProtocol=https;AccountName=st10365052demostorage;AccountKey=5fTakvNfnJG3Gm7ndmyFD1gno7X9MsKJbKiuSLZNYxdz6VPzTzH28MpyK/H8u/mZbRQ74C1OOAyO+AStQ/yUkg==;EndpointSuffix=core.windows.net";
-            string queueName = "st10365052queue";
+            string functionUrl = "https://st10365052cldva2.azurewebsites.net/api/FunctionTransaction?code=OrJEW3Ur_FrToUYwAkDmack_veRgaOWuZ2-NFAAHWbW3AzFuzrUMqg%3D%3D";
+            var client = _httpClientFactory.CreateClient();
 
-            QueueClient queueClient = new QueueClient(connectionString, queueName);
-            await queueClient.CreateIfNotExistsAsync();
+            var response = await client.PostAsync(functionUrl, null);
 
-            string message = "Order has been processed";
-            await queueClient.SendMessageAsync(message);
-
-            return RedirectToAction("Index");
+            if (response.IsSuccessStatusCode)
+            {
+                return RedirectToAction("Index");
+            }
+            else
+            {
+                return StatusCode((int)response.StatusCode, await response.Content.ReadAsStringAsync());
+            }
         }
 
         [HttpPost]
+        [HttpPost]
         public async Task<IActionResult> SubmitUserDetails(string name, string email, string password, string city)
         {
-            string connectionString = "DefaultEndpointsProtocol=https;AccountName=st10365052demostorage;AccountKey=5fTakvNfnJG3Gm7ndmyFD1gno7X9MsKJbKiuSLZNYxdz6VPzTzH28MpyK/H8u/mZbRQ74C1OOAyO+AStQ/yUkg==;EndpointSuffix=core.windows.net";
-            string tableName = "userTable";
+            var functionUrl = "https://st10365052cldva2.azurewebsites.net/api/FunctionTable?code=-2Q97uC-PXbddeFoLQpMEc6CUnTzmrCTEgYeWjYbjQb2AzFuPg-C7A%3D%3D";
 
-            TableServiceClient tableServiceClient = new TableServiceClient(connectionString);
-            TableClient tableClient = tableServiceClient.GetTableClient(tableName);
-            await tableClient.CreateIfNotExistsAsync();
-
-            var customerEntity = new TableEntity("Customer", Guid.NewGuid().ToString())
-                {
-                    { "Name", name },
-                    { "Email", email },
-                    { "Password", password },
-                    { "City", city }
-                };
-
-            await tableClient.AddEntityAsync(customerEntity);
-
-            return RedirectToAction("Index");
-        }
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
+            using (var client = new HttpClient())
+            {
+                var requestBody = new Dictionary<string, string>
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            { "name", name },
+            { "email", email },
+            { "password", password },
+            { "city", city }
+        };
+
+                var content = new FormUrlEncodedContent(requestBody);
+                var response = await client.PostAsync(functionUrl, content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return RedirectToAction("Index");
+                }
+                else
+                {
+                    return StatusCode((int)response.StatusCode, await response.Content.ReadAsStringAsync());
+                }
+            }
         }
+
     }
 }

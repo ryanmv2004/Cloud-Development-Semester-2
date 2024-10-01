@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "st10365052FunctionApp": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7057",
+      "launchBrowser": false
+    }
+  }
+}
