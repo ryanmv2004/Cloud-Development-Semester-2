@@ -16,6 +16,7 @@ namespace cldv2APP.Controllers
         private readonly ILogger<HomeController> _logger;
         private readonly IConfiguration _configuration;
         private readonly IHttpClientFactory _httpClientFactory;
+        public cusTbl tbl = new cusTbl();
 
         public HomeController(ILogger<HomeController> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory)
         {
@@ -37,7 +38,7 @@ namespace cldv2APP.Controllers
         [HttpPost]
         public async Task<IActionResult> UploadImage(IFormFile image)
         {
-            if (image != null) 
+            if (image != null)
             {
                 using var stream = new MemoryStream();
                 await image.CopyToAsync(stream);
@@ -98,34 +99,10 @@ namespace cldv2APP.Controllers
         }
 
         [HttpPost]
-        [HttpPost]
-        public async Task<IActionResult> SubmitUserDetails(string name, string email, string password, string city)
+        public async Task<IActionResult> SubmitUserDetails(cusTbl customers)
         {
-            var functionUrl = "https://st10365052cldva2.azurewebsites.net/api/FunctionTable?code=-2Q97uC-PXbddeFoLQpMEc6CUnTzmrCTEgYeWjYbjQb2AzFuPg-C7A%3D%3D";
-
-            using (var client = new HttpClient())
-            {
-                var requestBody = new Dictionary<string, string>
-        {
-            { "name", name },
-            { "email", email },
-            { "password", password },
-            { "city", city }
-        };
-
-                var content = new FormUrlEncodedContent(requestBody);
-                var response = await client.PostAsync(functionUrl, content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return RedirectToAction("Index");
-                }
-                else
-                {
-                    return StatusCode((int)response.StatusCode, await response.Content.ReadAsStringAsync());
-                }
-            }
+            var result = tbl.insert_Customer(customers);
+            return RedirectToAction("Index", "Home");
         }
-
     }
 }
